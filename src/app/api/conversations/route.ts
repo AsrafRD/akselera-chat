@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
 import { db } from "@/db";
 import { conversations, conversationParticipants, users, messages } from "@/db/schema/index";
-import { and, desc, eq, ne, sql } from "drizzle-orm";
+import { and, desc, eq, ne, inArray } from "drizzle-orm";
 import { z } from "zod";
 
 export async function GET(req: NextRequest) {
@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
   // Find participants that are NOT the current user in these conversations
   const otherParticipants = await db.query.conversationParticipants.findMany({
     where: and(
-      sql`${conversationParticipants.conversationId} IN ${conversationIds}`,
+      inArray(conversationParticipants.conversationId, conversationIds),
       ne(conversationParticipants.userId, session.userId)
     ),
   });
@@ -32,21 +32,30 @@ export async function GET(req: NextRequest) {
   const userIds = otherParticipants.map(p => p.userId);
   const otherUsers = userIds.length > 0 
     ? await db.query.users.findMany({
-        where: sql`${users.id} IN ${userIds}`,
+        where: inArray(users.id, userIds),
         columns: { id: true, name: true, email: true }
       })
     : [];
 
   // Get conversations data for updatedAt
   const allConversations = await db.query.conversations.findMany({
-    where: sql`${conversations.id} IN ${conversationIds}`,
+    where: inArray(conversations.id, conversationIds),
+  });
+
+  // Get unread messages per conversation
+  const unreadMessages = await db.query.messages.findMany({
+    where: and(
+      inArray(messages.conversationId, conversationIds),
+      eq(messages.isRead, false),
+      ne(messages.senderId, session.userId)
+    ),
   });
 
   // Get latest message per conversation
   // Note: For a true robust app we might use distinct on or a lateral join,
   // but for simplicity we fetch the last message for each conversation
   const lastMessages = await db.query.messages.findMany({
-    where: sql`${messages.conversationId} IN ${conversationIds}`,
+    where: inArray(messages.conversationId, conversationIds),
     orderBy: [desc(messages.createdAt)],
   });
 
@@ -55,6 +64,8 @@ export async function GET(req: NextRequest) {
     const otherUser = otherParticipantRow ? otherUsers.find(u => u.id === otherParticipantRow.userId) : null;
     const lastMsg = lastMessages.find(m => m.conversationId === uc.conversationId);
     const convData = allConversations.find(c => c.id === uc.conversationId);
+    
+    const unreadCount = unreadMessages.filter(m => m.conversationId === uc.conversationId).length;
 
     return {
       id: uc.conversationId,
@@ -63,7 +74,8 @@ export async function GET(req: NextRequest) {
         body: lastMsg.body,
         createdAt: lastMsg.createdAt
       } : null,
-      updatedAt: convData?.updatedAt || new Date()
+      updatedAt: convData?.updatedAt || new Date(),
+      unreadCount
     };
   });
 

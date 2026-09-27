@@ -5,6 +5,7 @@ export interface Conversation {
   participant: { id: string; name: string; email: string } | null;
   lastMessage: { body: string; createdAt: string } | null;
   updatedAt: string;
+  unreadCount: number;
 }
 
 export function useConversations() {

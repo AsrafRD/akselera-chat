@@ -5,6 +5,7 @@ import {
   timestamp,
   uniqueIndex,
   index,
+  boolean,
 } from "drizzle-orm/pg-core";
 
 // 1. Users Table
@@ -67,6 +68,7 @@ export const messages = pgTable(
       .references(() => users.id, { onDelete: "cascade" })
       .notNull(),
     body: text("body").notNull(),
+    isRead: boolean("is_read").default(false).notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => ({

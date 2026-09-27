@@ -3,7 +3,7 @@ import { getSession } from "@/lib/auth/session";
 import { requireConversationAccess, ForbiddenError } from "@/lib/auth/authorization";
 import { db } from "@/db";
 import { messages, conversations } from "@/db/schema/index";
-import { eq, asc } from "drizzle-orm";
+import { eq, asc, and, ne } from "drizzle-orm";
 import { z } from "zod";
 
 export async function GET(
@@ -17,6 +17,17 @@ export async function GET(
 
   try {
     await requireConversationAccess(conversationId, session.userId);
+
+    // Mark messages as read
+    await db.update(messages)
+      .set({ isRead: true })
+      .where(
+        and(
+          eq(messages.conversationId, conversationId),
+          eq(messages.isRead, false),
+          ne(messages.senderId, session.userId)
+        )
+      );
 
     const convoMessages = await db.query.messages.findMany({
       where: eq(messages.conversationId, conversationId),

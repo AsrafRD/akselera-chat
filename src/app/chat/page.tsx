@@ -129,7 +129,16 @@ export default function ChatPage() {
                         {chat.lastMessage?.createdAt ? new Date(chat.lastMessage.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
                       </span>
                     </div>
-                    <p className="text-sm text-zinc-500 truncate">{chat.lastMessage?.body || "Belum ada pesan"}</p>
+                    <div className="flex items-center justify-between">
+                      <p className={`text-sm truncate pr-2 ${chat.unreadCount > 0 ? 'text-black dark:text-white font-semibold' : 'text-zinc-500'}`}>
+                        {chat.lastMessage?.body || "Belum ada pesan"}
+                      </p>
+                      {chat.unreadCount > 0 && (
+                        <div className="h-5 min-w-[20px] rounded-full bg-blue-500 text-white flex items-center justify-center text-[10px] font-bold px-1.5 shrink-0">
+                          {chat.unreadCount}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </button>
               ))

@@ -6,8 +6,12 @@ export async function middleware(request: NextRequest) {
   const sessionCookie = request.cookies.get('session');
   const pathname = request.nextUrl.pathname;
   
-  // Izinkan rute auth dan login lewat tanpa token
-  const isAuthRoute = pathname.startsWith('/api/auth/login') || pathname === '/login';
+  // Izinkan rute auth dan pendaftaran lewat tanpa token
+  const isAuthRoute = 
+    pathname.startsWith('/api/auth/login') || 
+    pathname.startsWith('/api/auth/register') || 
+    pathname === '/login' || 
+    pathname === '/register';
   
   // Jika tidak ada token dan mencoba akses protected route
   if (!sessionCookie && !isAuthRoute) {
@@ -43,5 +47,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/chat/:path*', '/api/:path*', '/login', '/'],
+  matcher: ['/chat/:path*', '/api/:path*', '/login', '/register', '/'],
 };
