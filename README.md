@@ -1,36 +1,31 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
-
-## Getting Started
-
-First, run the development server:
-
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Akselera.Tech — Internal Chat ApplicationAplikasi web chat internal 1-on-1 berbasis Next.js App Router yang dibangun khusus untuk kebutuhan CRM internal Akselera.Tech. Ditujukan sebagai fondasi komunikasi sebelum dihubungkan dengan WhatsApp API. 🔑 Akun Sampel & AccessAplikasi di-deploy dan dapat diakses publik melalui: [https://akselera-chat.vercel.app](https://akselera-chat.vercel.app) (Ganti dengan URL publik milikmu)Gunakan salah satu pasang akun di bawah ini untuk menguji fitur percakapan interaktif 1-on-1:EmailPasswordPeranandi@contoh.idpassword123Sampel User 1rina@contoh.idpassword123Sampel User 2bayu@contoh.idpassword123Sampel User 3maya@contoh.idpassword123Sampel User 4🛠️ Tech Stack & InfrastrukturStack UtamaFramework: Next.js 15 (App Router, TypeScript)Database: Neon PostgreSQL (Serverless Postgres)ORM: Drizzle ORMAuthentication: Custom JWT (jose) via HTTP-Only CookiesPassword Hashing: Argon2id (@node-rs/argon2)Styling & Theme: Tailwind CSS + next-themes (Strictly NO UI Component Libraries)Icons & Font: Lucide React + Nunito Font (next/font/google) Client State & Caching: TanStack Query (React Query) v5Validation: ZodDeployment: Vercel💡 Alasan Pemilihan Infrastruktur & Arsitektur1. Neon PostgreSQL (Serverless Postgres) vs BaaSDipilih karena murni bertindak sebagai RDBMS PostgreSQL tanpa mengikat logika aplikasi ke platform BaaS (seperti Supabase/Firebase). Neon menggunakan arsitektur seperate compute and storage yang kompatibel penuh dengan Drizzle ORM serta mendukung koneksi HTTP/WebSocket connection pooling secara native di lingkungan Vercel Serverless.2. Drizzle ORM vs PrismaDrizzle ORM dipilih karena memiliki footprint paling ringan, zero overhead, type-safety penuh berbasis SQL eksplisit, serta waktu inisialisasi (cold start) yang jauh lebih cepat dibanding Prisma pada lingkungan Serverless Functions.3. Arsitektur Otorisasi 2-Lapisan (Security First)Untuk memenuhi Fitur Wajib #5 (Otorisasi ketat di mana user hanya bisa membaca percakapannya sendiri), dibuat pemisahan peran secara tegas: Layer 1 — Authentication (Next.js Middleware): Menjamin bahwa request yang masuk memiliki token JWT session yang valid. Jika tidak valid, request di-reject (401 / redirect /login). Layer 2 — Authorization (Route Handler / Helper requireConversationAccess): Memeriksa langsung ke tabel conversation_participants database apakah userId terdaftar sebagai partisipan di conversationId yang diminta. Jika bukan partisipan, API mengembalikan respon 403 Forbidden walau conversationId tersebut valid.4. Strategi Penggunaan Redis & Database CachePostgreSQL difungsikan sebagai Single Source of Truth. Pada scope proyek 3 hari ini, data chat list sengaja tidak disimpan di dalam cache Redis. Keputusan ini diambil untuk menghindari cache invalidation complexity dan potensi race condition saat pengiriman pesan. Redis dialokasikan secara terbatas untuk keperluan rate limiting dan presence status.🗄️ Struktur Tabel Database Schema ┌──────────────┐
+│ users │
+└──────┬───────┘
+│ 1
+│
+│ N
+┌──────────────┴───────────────┐
+│ conversation_participants │
+└──────────────┬───────────────┘
+│ N
+│
+│ 1
+┌────────┴────────┐
+│ conversations │
+└────────┬────────┘
+│ 1
+│
+│ N
+┌──────┴───────┐
+│ messages │
+└──────────────┘
+Tabel & Relasi (src/db/schema/index.ts)users: Menyimpan data identitas (id, name, email, password_hash, created_at). Indexed pada email.conversations: Menampung entri percakapan (id, created_at, updated_at).conversation_participants: Tabel junction/mapping 1-on-1 (conversation_id, user_id, created_at). Memiliki constraint UNIQUE(conversation_id, user_id) untuk mencegah duplicate direct-chat antara 2 akun yang sama.messages: Menyimpan isi riwayat pesan (id, conversation_id, sender_id, body, created_at). Indexed pada (conversation_id, created_at).🚀 Cara Menjalankan Secara LokalPrasyaratNode.js v24.xnpm / pnpmInstans Database PostgreSQL (Neon atau Postgres Lokal)Langkah-LangkahClone Repositori:Bashgit clone https://github.com/username/akselera-chat.git
+cd akselera-chat
+Install Dependensi:Bashnpm install
+Konfigurasi Environment Variables:Buat file .env.local di root proyek dan isi variabel berikut:Code snippetDATABASE_URL="postgresql://user:password@ep-sample.neon.tech/neondb?sslmode=require"
+JWT_SECRET="masukkan_random_secret_minimal_32_karakter"
+NODE_ENV="development"
+Migrasi & Seed Database:Jalankan migrasi schema Drizzle dan seed data sampel akun:Bashnpm run db:push
+npm run db:seed
+Jalankan Development Server:Bashnpm run dev
+Buka http://localhost:3000 di browser.🤖 Penggunaan AI ToolsPengembangan aplikasi ini memanfaatkan bantuan AI Coding Tools (seperti Claude 3.5 Sonnet / Cursor / Copilot) untuk mempercepat penulisan boilerplate. Untuk menjaga kerapian kode, arsitektur, dan mencegah timbulnya security hole, digunakan pendekatan Agentic Rule Management dengan membuat folder .agents/ dan file AGENTS.md di root repositori:AGENTS.md: Master instruksi untuk AI Agent agar selalu mematuhi tech stack utama dan larangan penggunaan library UI eksternal. .agents/security-auth.md: Aturan ketat mengenai otorisasi 2-layer, penanganan JWT HTTP-Only, dan pencegahan data leakage. .agents/database-drizzle.md: Aturan penulisan query Drizzle ORM, indexing, dan idempotensi percakapan 1-on-1..agents/ui-branding.md: Aturan desain tampilan, penggunaan font Nunito, warna Akselera.Tech (#000000 & #FFFFFF), serta penggantian logo otomatis sesuai Light/Dark mode. 📌 Status Fitur & Hal yang Belum SelesaiFitur Wajib (100% Selesai)[x] Auth & Session Guard: Login/Logout, penguncian halaman /chat tanpa login. [x] Add New Chat: Memilih user terdaftar lain untuk membuat/membuka percakapan 1-on-1. [x] Messaging System: Kirim & terima pesan teks, data tersimpan persisten di database. [x] Chat List Sidebar: Menampilkan nama lawan bicara, cuplikan pesan terakhir, dan timestamp. [x] Strict Data Isolation: Mencegah akses membaca/mengirim pesan milik orang lain via API/Database. [x] Light / Dark Mode: Toggle mode terang & gelap di semua layar, termasuk logo Akselera.Tech. Fitur Bonus & Pengembangan Lanjutan[x] Registrasi Akun Mandiri (Bonus). [x] Pencarian Chat & Filter User (Bonus). [x] Persistensi Pilihan Mode Tema (Bonus via next-themes / localStorage). [x] Pemberitahuan Pesan Realtime (Bonus diselesaikan menggunakan Polling TanStack Query / Server-Sent Events).[ ] Penanda Pesan Belum Dibaca (Unread Badge Count): Schema siap, namun UI badge belum sepenuhnya diintegrasikan.

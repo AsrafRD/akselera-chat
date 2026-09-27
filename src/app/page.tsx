@@ -1,67 +1,78 @@
-import Image from "next/image";
+import Link from "next/link";
+import { MessageSquare, Shield, Zap } from "lucide-react";
+import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 
-export default function Home() {
+export default function LandingPage() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="min-h-screen flex flex-col bg-white dark:bg-black text-black dark:text-white transition-colors">
+      <header className="h-16 flex items-center justify-between px-6 border-b border-zinc-200 dark:border-zinc-800">
+        <div className="flex items-center">
+          <img src="/logo-black.png" alt="Akselera.Tech" className="h-6 dark:hidden block" />
+          <img src="/logo-white.png" alt="Akselera.Tech" className="h-6 hidden dark:block" />
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+        <div className="flex items-center gap-4">
+          <ThemeSwitcher />
+          <Link 
+            href="/login" 
+            className="text-sm font-semibold hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
           >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+            Masuk
+          </Link>
+          <Link 
+            href="/login" 
+            className="bg-black text-white dark:bg-white dark:text-black px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity"
           >
-            Documentation
-          </a>
+            Mulai Chat
+          </Link>
+        </div>
+      </header>
+
+      <main className="flex-1 flex flex-col items-center justify-center text-center p-6 max-w-4xl mx-auto">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-sm font-medium mb-8">
+          <span className="flex h-2 w-2 rounded-full bg-green-500"></span>
+          Internal Beta v0.1
+        </div>
+        
+        <h1 className="text-4xl sm:text-6xl font-bold tracking-tight mb-6">
+          Komunikasi Tim yang Cepat, <br className="hidden sm:block" />
+          Aman, dan Terisolasi.
+        </h1>
+        
+        <p className="text-lg text-zinc-500 dark:text-zinc-400 max-w-2xl mb-10">
+          Akselera.Tech Chat adalah platform komunikasi internal 1-on-1 dengan 
+          keamanan otorisasi 2-lapis. Dibangun untuk memastikan privasi tim Anda tetap terjaga.
+        </p>
+
+        <Link 
+          href="/login" 
+          className="flex items-center gap-2 bg-black text-white dark:bg-white dark:text-black px-6 py-3 rounded-full text-lg font-semibold hover:scale-105 active:scale-95 transition-all"
+        >
+          Masuk ke Aplikasi
+          <span>→</span>
+        </Link>
+
+        <div className="grid sm:grid-cols-3 gap-8 mt-24 text-left w-full">
+          <div className="flex flex-col gap-3">
+            <div className="h-10 w-10 bg-zinc-100 dark:bg-zinc-900 rounded-lg flex items-center justify-center">
+              <Zap size={20} />
+            </div>
+            <h3 className="font-bold">Real-time & Cepat</h3>
+            <p className="text-sm text-zinc-500">Optimistic UI dengan TanStack Query untuk pengalaman chat instan tanpa lag.</p>
+          </div>
+          <div className="flex flex-col gap-3">
+            <div className="h-10 w-10 bg-zinc-100 dark:bg-zinc-900 rounded-lg flex items-center justify-center">
+              <Shield size={20} />
+            </div>
+            <h3 className="font-bold">Otorisasi Ketat</h3>
+            <p className="text-sm text-zinc-500">Pemisahan otentikasi JWT dan pengecekan akses database 1-on-1 di level API.</p>
+          </div>
+          <div className="flex flex-col gap-3">
+            <div className="h-10 w-10 bg-zinc-100 dark:bg-zinc-900 rounded-lg flex items-center justify-center">
+              <MessageSquare size={20} />
+            </div>
+            <h3 className="font-bold">Desain Minimalis</h3>
+            <p className="text-sm text-zinc-500">Antarmuka bersih dan responsif menggunakan Tailwind CSS murni.</p>
+          </div>
         </div>
       </main>
     </div>
