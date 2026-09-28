@@ -1,30 +1,21 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import type { Message } from "@/types";
 
-export interface Message {
-  id: string;
-  conversationId: string;
-  senderId: string;
-  body: string;
-  isRead: boolean;
-  isDeleted?: boolean;
-  isForwarded?: boolean;
-  replyToId?: string | null;
-  attachmentUrl?: string | null;
-  attachmentType?: string | null;
-  createdAt: string;
-}
-
-// 1. Hook untuk mengambil riwayat pesan dari suatu conversationId
+// 1. Hook untuk mengambil riwayat pesan dengan Infinite Scroll
 export function useMessages(conversationId: string | null) {
-  return useQuery<Message[]>({
+  return useInfiniteQuery<{ data: Message[]; nextCursor: string | null }>({
     queryKey: ["messages", conversationId],
-    queryFn: async () => {
-      if (!conversationId) return [];
-      const res = await fetch(`/api/conversations/${conversationId}/messages`);
+    queryFn: async ({ pageParam }) => {
+      if (!conversationId) return { data: [], nextCursor: null };
+      const url = new URL(`/api/conversations/${conversationId}/messages`, window.location.origin);
+      if (pageParam) url.searchParams.set("cursor", pageParam as string);
+      
+      const res = await fetch(url.toString());
       if (!res.ok) throw new Error("Gagal mengambil daftar pesan");
-      const { data } = await res.json();
-      return data;
+      return res.json();
     },
+    getNextPageParam: (lastPage) => lastPage.nextCursor || undefined,
+    initialPageParam: undefined as string | undefined,
     enabled: !!conversationId,
   });
 }
@@ -58,7 +49,7 @@ export function useSendMessage(conversationId: string | null) {
       await queryClient.cancelQueries({ queryKey: ["messages", conversationId] });
 
       // 2. Simpan cache lama (untuk rollback jika request gagal)
-      const previousMessages = queryClient.getQueryData<Message[]>(["messages", conversationId]);
+      const previousMessages = queryClient.getQueryData(["messages", conversationId]);
 
       // 3. Buat obyek pesan 'pura-pura' (Optimistic Message)
       const optimisticMessage: Message = {
@@ -74,8 +65,20 @@ export function useSendMessage(conversationId: string | null) {
       };
 
       // 4. Update state secara optimis
-      queryClient.setQueryData<Message[]>(["messages", conversationId], (old) => {
-        return old ? [...old, optimisticMessage] : [optimisticMessage];
+      queryClient.setQueryData(["messages", conversationId], (old: any) => {
+        if (!old || !old.pages || old.pages.length === 0) return old;
+        
+        const newPages = [...old.pages];
+        // Tambahkan optimistic message di bagian bawah page pertama (yang berisi pesan terbaru)
+        newPages[0] = {
+          ...newPages[0],
+          data: [...newPages[0].data, optimisticMessage]
+        };
+        
+        return {
+          ...old,
+          pages: newPages
+        };
       });
 
       // Kembalikan konteks yang menyimpan data lama untuk error rollback

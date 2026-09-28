@@ -4,13 +4,8 @@ import { users } from "@/db/schema/index";
 import { eq } from "drizzle-orm";
 import { hash } from "@node-rs/argon2";
 import { createSession } from "@/lib/auth/session";
+import { RegisterSchema } from "@/lib/validation";
 import { z } from "zod";
-
-const RegisterSchema = z.object({
-  name: z.string().min(2),
-  email: z.string().email(),
-  password: z.string().min(6),
-});
 
 export async function POST(req: NextRequest) {
   try {

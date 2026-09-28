@@ -1,12 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-
-export interface Conversation {
-  id: string;
-  participant: { id: string; name: string; email: string } | null;
-  lastMessage: { body: string; createdAt: string } | null;
-  updatedAt: string;
-  unreadCount: number;
-}
+import type { Conversation } from "@/types";
 
 export function useConversations() {
   return useQuery<Conversation[]>({
