@@ -7,7 +7,7 @@ import { Lightbox } from "@/components/ui/Lightbox";
 import { Search, Plus, MessageSquare, LogOut, Send, Paperclip, Trash2, Reply, X, Image as ImageIcon, ChevronDown, Loader2 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useConversations } from "@/hooks/useConversations";
-import { useMessages, useSendMessage, useDeleteMessage } from "@/hooks/useMessages";
+import { useMessages, useSendMessage, useDeleteMessage, useEditMessage } from "@/hooks/useMessages";
 import type { Message } from "@/types";
 import { useRealtimeSSE } from "@/hooks/useRealtimeSSE";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -27,6 +27,7 @@ export default function ChatPage() {
 
   // Fitur Upload, Reply, & Interaksi Pesan
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
+  const [editingMessage, setEditingMessage] = useState<Message | null>(null);
   const [attachmentUrl, setAttachmentUrl] = useState<string | null>(null);
   const [attachmentType, setAttachmentType] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -60,6 +61,7 @@ export default function ChatPage() {
   const messages = messagesData?.pages.slice().reverse().flatMap(page => page.data) || [];
   const sendMessage = useSendMessage(activeChatId);
   const deleteMessage = useDeleteMessage(activeChatId);
+  const editMessage = useEditMessage(activeChatId);
 
   // Cari chat berdasarkan input di Sidebar
   const filteredChats = conversations.filter((c) => 
@@ -85,12 +87,22 @@ export default function ChatPage() {
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
     if ((!messageInput.trim() && !attachmentUrl) || !activeChatId) return;
-    sendMessage.mutate({ 
-      text: messageInput.trim(), 
-      replyToId: replyingTo?.id,
-      attachmentUrl,
-      attachmentType
-    });
+
+    if (editingMessage) {
+      editMessage.mutate({
+        messageId: editingMessage.id,
+        newBody: messageInput.trim()
+      });
+      setEditingMessage(null);
+    } else {
+      sendMessage.mutate({ 
+        text: messageInput.trim(), 
+        replyToId: replyingTo?.id,
+        attachmentUrl,
+        attachmentType
+      });
+    }
+
     setMessageInput("");
     setReplyingTo(null);
     setAttachmentUrl(null);
@@ -271,6 +283,13 @@ export default function ChatPage() {
                     activeMenuId={activeMenuId}
                     setActiveMenuId={setActiveMenuId}
                     setReplyingTo={setReplyingTo}
+                    setEditingMessage={(msg) => {
+                      setEditingMessage(msg);
+                      setMessageInput(msg?.body || "");
+                      setReplyingTo(null);
+                      setAttachmentUrl(null);
+                      setAttachmentType(null);
+                    }}
                     deleteMessageMutate={deleteMessage.mutate}
                     setPreviewImage={setPreviewImage}
                   />
@@ -283,13 +302,26 @@ export default function ChatPage() {
             <div className="bg-white dark:bg-black border-t border-zinc-200 dark:border-zinc-800 shrink-0 relative">
               
               {/* Replying Banner */}
-              {replyingTo && (
+              {replyingTo && !editingMessage && (
                 <div className="bg-zinc-100 dark:bg-zinc-900 px-4 py-2 border-l-4 border-blue-500 flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800">
                   <div className="flex flex-col text-xs truncate mr-4">
                     <span className="font-semibold text-blue-500">Membalas pesan...</span>
                     <span className="text-zinc-600 dark:text-zinc-400 truncate">{replyingTo.body}</span>
                   </div>
                   <button onClick={() => setReplyingTo(null)} className="text-zinc-500 hover:text-red-500">
+                    <X size={16} />
+                  </button>
+                </div>
+              )}
+
+              {/* Editing Banner */}
+              {editingMessage && (
+                <div className="bg-blue-50 dark:bg-blue-900/20 px-4 py-2 border-l-4 border-blue-600 dark:border-blue-400 flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800">
+                  <div className="flex flex-col text-xs truncate mr-4">
+                    <span className="font-semibold text-blue-600 dark:text-blue-400">Mengedit Pesan</span>
+                    <span className="text-zinc-600 dark:text-zinc-400 truncate">{editingMessage.body}</span>
+                  </div>
+                  <button onClick={() => { setEditingMessage(null); setMessageInput(""); }} className="text-zinc-500 hover:text-red-500">
                     <X size={16} />
                   </button>
                 </div>

@@ -1,31 +1,86 @@
-Akselera.Tech — Internal Chat ApplicationAplikasi web chat internal 1-on-1 berbasis Next.js App Router yang dibangun khusus untuk kebutuhan CRM internal Akselera.Tech. Ditujukan sebagai fondasi komunikasi sebelum dihubungkan dengan WhatsApp API. 🔑 Akun Sampel & AccessAplikasi di-deploy dan dapat diakses publik melalui: [https://akselera-chat.vercel.app](https://akselera-chat.vercel.app) (Ganti dengan URL publik milikmu)Gunakan salah satu pasang akun di bawah ini untuk menguji fitur percakapan interaktif 1-on-1:EmailPasswordPeranandi@contoh.idpassword123Sampel User 1rina@contoh.idpassword123Sampel User 2bayu@contoh.idpassword123Sampel User 3maya@contoh.idpassword123Sampel User 4🛠️ Tech Stack & InfrastrukturStack UtamaFramework: Next.js 15 (App Router, TypeScript)Database: Neon PostgreSQL (Serverless Postgres)ORM: Drizzle ORMAuthentication: Custom JWT (jose) via HTTP-Only CookiesPassword Hashing: Argon2id (@node-rs/argon2)Styling & Theme: Tailwind CSS + next-themes (Strictly NO UI Component Libraries)Icons & Font: Lucide React + Nunito Font (next/font/google) Client State & Caching: TanStack Query (React Query) v5Validation: ZodDeployment: Vercel💡 Alasan Pemilihan Infrastruktur & Arsitektur1. Neon PostgreSQL (Serverless Postgres) vs BaaSDipilih karena murni bertindak sebagai RDBMS PostgreSQL tanpa mengikat logika aplikasi ke platform BaaS (seperti Supabase/Firebase). Neon menggunakan arsitektur seperate compute and storage yang kompatibel penuh dengan Drizzle ORM serta mendukung koneksi HTTP/WebSocket connection pooling secara native di lingkungan Vercel Serverless.2. Drizzle ORM vs PrismaDrizzle ORM dipilih karena memiliki footprint paling ringan, zero overhead, type-safety penuh berbasis SQL eksplisit, serta waktu inisialisasi (cold start) yang jauh lebih cepat dibanding Prisma pada lingkungan Serverless Functions.3. Arsitektur Otorisasi 2-Lapisan (Security First)Untuk memenuhi Fitur Wajib #5 (Otorisasi ketat di mana user hanya bisa membaca percakapannya sendiri), dibuat pemisahan peran secara tegas: Layer 1 — Authentication (Next.js Middleware): Menjamin bahwa request yang masuk memiliki token JWT session yang valid. Jika tidak valid, request di-reject (401 / redirect /login). Layer 2 — Authorization (Route Handler / Helper requireConversationAccess): Memeriksa langsung ke tabel conversation_participants database apakah userId terdaftar sebagai partisipan di conversationId yang diminta. Jika bukan partisipan, API mengembalikan respon 403 Forbidden walau conversationId tersebut valid.4. Strategi Penggunaan Redis & Database CachePostgreSQL difungsikan sebagai Single Source of Truth. Pada scope proyek 3 hari ini, data chat list sengaja tidak disimpan di dalam cache Redis. Keputusan ini diambil untuk menghindari cache invalidation complexity dan potensi race condition saat pengiriman pesan. Redis dialokasikan secara terbatas untuk keperluan rate limiting dan presence status.🗄️ Struktur Tabel Database Schema ┌──────────────┐
-│ users │
-└──────┬───────┘
-│ 1
-│
-│ N
-┌──────────────┴───────────────┐
-│ conversation_participants │
-└──────────────┬───────────────┘
-│ N
-│
-│ 1
-┌────────┴────────┐
-│ conversations │
-└────────┬────────┘
-│ 1
-│
-│ N
-┌──────┴───────┐
-│ messages │
-└──────────────┘
-Tabel & Relasi (src/db/schema/index.ts)users: Menyimpan data identitas (id, name, email, password_hash, created_at). Indexed pada email.conversations: Menampung entri percakapan (id, created_at, updated_at).conversation_participants: Tabel junction/mapping 1-on-1 (conversation_id, user_id, created_at). Memiliki constraint UNIQUE(conversation_id, user_id) untuk mencegah duplicate direct-chat antara 2 akun yang sama.messages: Menyimpan isi riwayat pesan (id, conversation_id, sender_id, body, created_at). Indexed pada (conversation_id, created_at).🚀 Cara Menjalankan Secara LokalPrasyaratNode.js v24.xnpm / pnpmInstans Database PostgreSQL (Neon atau Postgres Lokal)Langkah-LangkahClone Repositori:Bashgit clone https://github.com/username/akselera-chat.git
-cd akselera-chat
-Install Dependensi:Bashnpm install
-Konfigurasi Environment Variables:Buat file .env.local di root proyek dan isi variabel berikut:Code snippetDATABASE_URL="postgresql://user:password@ep-sample.neon.tech/neondb?sslmode=require"
-JWT_SECRET="masukkan_random_secret_minimal_32_karakter"
-NODE_ENV="development"
-Migrasi & Seed Database:Jalankan migrasi schema Drizzle dan seed data sampel akun:Bashnpm run db:push
-npm run db:seed
-Jalankan Development Server:Bashnpm run dev
-Buka http://localhost:3000 di browser.🤖 Penggunaan AI ToolsPengembangan aplikasi ini memanfaatkan bantuan AI Coding Tools (seperti Claude 3.5 Sonnet / Cursor / Copilot) untuk mempercepat penulisan boilerplate. Untuk menjaga kerapian kode, arsitektur, dan mencegah timbulnya security hole, digunakan pendekatan Agentic Rule Management dengan membuat folder .agents/ dan file AGENTS.md di root repositori:AGENTS.md: Master instruksi untuk AI Agent agar selalu mematuhi tech stack utama dan larangan penggunaan library UI eksternal. .agents/security-auth.md: Aturan ketat mengenai otorisasi 2-layer, penanganan JWT HTTP-Only, dan pencegahan data leakage. .agents/database-drizzle.md: Aturan penulisan query Drizzle ORM, indexing, dan idempotensi percakapan 1-on-1..agents/ui-branding.md: Aturan desain tampilan, penggunaan font Nunito, warna Akselera.Tech (#000000 & #FFFFFF), serta penggantian logo otomatis sesuai Light/Dark mode. 📌 Status Fitur & Hal yang Belum SelesaiFitur Wajib (100% Selesai)[x] Auth & Session Guard: Login/Logout, penguncian halaman /chat tanpa login. [x] Add New Chat: Memilih user terdaftar lain untuk membuat/membuka percakapan 1-on-1. [x] Messaging System: Kirim & terima pesan teks, data tersimpan persisten di database. [x] Chat List Sidebar: Menampilkan nama lawan bicara, cuplikan pesan terakhir, dan timestamp. [x] Strict Data Isolation: Mencegah akses membaca/mengirim pesan milik orang lain via API/Database. [x] Light / Dark Mode: Toggle mode terang & gelap di semua layar, termasuk logo Akselera.Tech. Fitur Bonus & Pengembangan Lanjutan[x] Registrasi Akun Mandiri (Bonus). [x] Pencarian Chat & Filter User (Bonus). [x] Persistensi Pilihan Mode Tema (Bonus via next-themes / localStorage). [x] Pemberitahuan Pesan Realtime (Bonus diselesaikan menggunakan Polling TanStack Query / Server-Sent Events).[ ] Penanda Pesan Belum Dibaca (Unread Badge Count): Schema siap, namun UI badge belum sepenuhnya diintegrasikan.
+# Akselera-Chat
+
+Akselera-Chat adalah aplikasi percakapan internal (1-on-1) real-time yang dirancang untuk Akselera.Tech, mengutamakan performa, keamanan berlapis, dan struktur basis data yang solid.
+
+## 🚀 Stack & Infrastruktur
+Proyek ini dibangun menggunakan teknologi modern untuk memastikan aplikasi berjalan sangat cepat, hemat biaya, dan *scalable*:
+
+- **Framework**: **Next.js 16 (App Router) dengan Turbopack**
+  - *Alasan*: Menawarkan *Server-Side Rendering* (SSR) mumpuni, *Route Handlers* untuk API terintegrasi, dan *developer experience* yang cepat menggunakan Turbopack.
+- **Database**: **Neon PostgreSQL (Serverless)**
+  - *Alasan*: Mendukung *scale-to-zero* yang sangat hemat biaya, *connection pooling* bawaan, dan latensi rendah untuk aplikasi serverless/Edge.
+- **ORM**: **Drizzle ORM**
+  - *Alasan*: ORM TypeScript yang sangat ringan (tanpa *heavy runtime* seperti Prisma), performa tinggi, dan Type-Safe dari ujung ke ujung.
+- **Authentication**: **Custom JWT (`jose`) + HTTP-Only Cookies + Argon2id**
+  - *Alasan*: Tidak menggunakan Auth eksternal berbayar. *Argon2id* adalah algoritma hashing pemenang *Password Hashing Competition* (sangat aman terhadap brute-force), dan token disimpan di *HTTP-Only Cookies* agar kebal dari serangan XSS.
+- **Styling**: **Tailwind CSS (Murni)**
+  - *Alasan*: Sesuai persyaratan untuk *zero-tolerance* terhadap UI Component Library eksternal, membuat *bundle size* tetap minimal dan desain eksklusif.
+- **Realtime Pub/Sub**: **Upstash Redis + Server-Sent Events (SSE)**
+  - *Alasan*: Menghindari keborosan *polling* HTTP. Redis mendistribusikan *event* secara instan ke *client* yang terkoneksi tanpa *overhead* WebSocket (Socket.io).
+- **State Management**: **TanStack Query (React Query v5)**
+  - *Alasan*: Handal dalam mengatur sinkronisasi data *server-state*, mendukung *Infinite Scroll*, *Optimistic Updates*, dan manajemen *cache* yang cerdas.
+
+## 💻 Cara Menjalankan Secara Lokal
+
+1. **Clone Repositori & Install Dependencies**
+   ```bash
+   git clone <repo-url>
+   cd akselera-chat
+   npm install
+   ```
+
+2. **Setup Environment Variables**
+   Buat file `.env` di *root* direktori dan isikan nilai berikut:
+   ```env
+   NODE_ENV="development"
+   DATABASE_URL="postgresql://<user>:<pass>@<neon-host>/<db>?sslmode=require"
+   JWT_SECRET="minimal-32-karakter-rahasia-anda"
+   
+   # Untuk Upload Gambar (Opsional jika ingin test fitur lampiran)
+   NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME="..."
+   NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET="..."
+   
+   # Untuk Realtime (Upstash)
+   UPSTASH_REDIS_REST_URL="..."
+   UPSTASH_REDIS_REST_TOKEN="..."
+   ```
+
+3. **Sinkronisasi Database (Drizzle Push) & Seeding**
+   Pastikan struktur tabel di Neon DB Anda sudah sinkron, lalu isi data *dummy* pengguna awal:
+   ```bash
+   npm run db:push
+   npm run db:seed
+   ```
+   *(Data user dummy: andi@contoh.id, rina@contoh.id, dll dengan password: password123)*
+
+4. **Jalankan Development Server**
+   ```bash
+   npm run dev
+   ```
+   Aplikasi dapat diakses di `http://localhost:3000`.
+
+## 🗄️ Struktur Tabel (Schema)
+
+Terdapat 4 tabel utama yang direlasikan dengan ketat (*Foreign Key & Cascading*):
+
+1. **`users`**
+   - Menyimpan kredensial (`email`, `password_hash`).
+2. **`conversations`**
+   - Menjadi *anchor* atau penanda sesi obrolan (menyimpan kapan *chat* terakhir aktif via `updatedAt`).
+3. **`conversation_participants`** (Tabel Pivot/Mapping)
+   - Memetakan `conversationId` ke `userId`.
+   - Menggunakan relasi **One-to-One constraints** (`unique_conversation_user_idx`) agar tidak ada data ganda (1 chat hanya berisi tepat 2 user yang sama).
+4. **`messages`**
+   - Menyimpan `body`, `senderId`, status baca (`isRead`), status ditarik (`isDeleted`), lampiran (`attachmentUrl`), hingga *flag* diedit (`isEdited`).
+
+## 🤖 AI Tools yang Digunakan
+
+- **Google Antigravity (Deepmind AAC)**: Digunakan secara otonom dalam merancang keseluruhan arsitektur, memperbaiki *bugs* (*Hydration Error*, *SSE Stream Controller*), melakukan refaktorisasi pola *Services*, hingga mengimplementasikan *Infinite Scrolling* dan komunikasi Redis.
+
+## 🚧 Hal / Fitur yang Masih Belum Selesai (Pending)
+
+Meski fungsionalitas inti telah berjalan sangat baik, terdapat beberapa bagian yang dapat ditingkatkan (sesuai *request* tahap selanjutnya):
+1. **Status Online / Indikator "Typing..."**: Belum diimplementasikan sepenuhnya di *Frontend* meskipun arsitektur Redis Pub/Sub sudah siap untuk menerima *event* tersebut.
+2. **Forward Message**: UI untuk memilih obrolan tujuan *forward* (*Meneruskan Pesan*) belum tersedia.
+3. **Validasi MIME Type Cloudinary yang Lebih Ketat**: Validasi ukuran file dan tipe gambar sebaiknya diperkuat di sisi *Server Route Handler* (saat ini *upload* dilakukan *direct* dari *client*). 
+4. **Push Notifications (PWA)**: Belum ada notifikasi natif browser apabila *tab* ditutup.

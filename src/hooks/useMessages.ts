@@ -122,3 +122,28 @@ export function useDeleteMessage(conversationId: string | null) {
     }
   });
 }
+
+// 4. Hook untuk Mengedit Pesan
+export function useEditMessage(conversationId: string | null) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (payload: { messageId: string; newBody: string }) => {
+      if (!conversationId) throw new Error("Percakapan belum dipilih");
+      const res = await fetch(`/api/conversations/${conversationId}/messages/${payload.messageId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ body: payload.newBody }),
+      });
+      if (!res.ok) throw new Error("Gagal mengedit pesan");
+      const { data } = await res.json();
+      return data;
+    },
+    onSuccess: () => {
+      if (conversationId) {
+        queryClient.invalidateQueries({ queryKey: ["messages", conversationId] });
+        queryClient.invalidateQueries({ queryKey: ["conversations"] });
+      }
+    }
+  });
+}

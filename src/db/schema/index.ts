@@ -74,6 +74,7 @@ export const messages = pgTable(
     replyToId: uuid("reply_to_id").references((): AnyPgColumn => messages.id),
     isDeleted: boolean("is_deleted").default(false).notNull(),
     isForwarded: boolean("is_forwarded").default(false).notNull(),
+    isEdited: boolean("is_edited").default(false).notNull(),
     isRead: boolean("is_read").default(false).notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },

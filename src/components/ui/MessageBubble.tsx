@@ -11,6 +11,7 @@ interface MessageBubbleProps {
   activeMenuId: string | null;
   setActiveMenuId: (id: string | null) => void;
   setReplyingTo: (msg: Message | null) => void;
+  setEditingMessage?: (msg: Message | null) => void;
   deleteMessageMutate: (id: string) => void;
   setPreviewImage: (url: string) => void;
 }
@@ -23,6 +24,7 @@ export function MessageBubble({
   activeMenuId,
   setActiveMenuId,
   setReplyingTo,
+  setEditingMessage,
   deleteMessageMutate,
   setPreviewImage
 }: MessageBubbleProps) {
@@ -46,12 +48,22 @@ export function MessageBubble({
             <Reply size={14} /> Balas
           </button>
           {isMe && !msg.isDeleted && (
-            <button 
-              onClick={() => { deleteMessageMutate(msg.id); setActiveMenuId(null); }}
-              className="w-full text-left px-3 py-1.5 text-xs text-red-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center gap-2"
-            >
-              <Trash2 size={14} /> Tarik
-            </button>
+            <>
+              {setEditingMessage && (
+                <button 
+                  onClick={() => { setEditingMessage(msg); setActiveMenuId(null); }}
+                  className="w-full text-left px-3 py-1.5 text-xs hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center gap-2"
+                >
+                  <ChevronDown size={14} className="rotate-[-90deg] opacity-0" /> Edit
+                </button>
+              )}
+              <button 
+                onClick={() => { deleteMessageMutate(msg.id); setActiveMenuId(null); }}
+                className="w-full text-left px-3 py-1.5 text-xs text-red-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center gap-2"
+              >
+                <Trash2 size={14} /> Tarik
+              </button>
+            </>
           )}
         </div>
       )}
@@ -97,6 +109,11 @@ export function MessageBubble({
         <span className={msg.isDeleted ? "italic opacity-60" : ""}>{msg.body}</span>
       </div>
       <div className="flex items-center gap-1 mt-1 px-1">
+        {msg.isEdited && !msg.isDeleted && (
+          <span className="text-[10px] text-zinc-400 italic mr-1">
+            (diedit)
+          </span>
+        )}
         <span className="text-[10px] text-zinc-500">
           {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </span>

@@ -9,6 +9,7 @@ export interface Message {
   replyToId?: string | null;
   attachmentUrl?: string | null;
   attachmentType?: string | null;
+  isEdited?: boolean;
   createdAt: string;
 }
 

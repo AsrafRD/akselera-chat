@@ -63,3 +63,65 @@ export async function DELETE(
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
+
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string; messageId: string }> }
+) {
+  try {
+    const session = await getSession();
+    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    const { id: conversationId, messageId } = await params;
+    await requireConversationAccess(conversationId, session.userId);
+
+    const { body } = await req.json();
+    if (!body || body.trim() === "") {
+      return NextResponse.json({ error: "Pesan tidak boleh kosong" }, { status: 400 });
+    }
+
+    // Validasi apakah pesan ada dan milik user yang sedang login
+    const msg = await db.query.messages.findFirst({
+      where: and(
+        eq(messages.id, messageId),
+        eq(messages.conversationId, conversationId)
+      )
+    });
+
+    if (!msg) return NextResponse.json({ error: "Pesan tidak ditemukan" }, { status: 404 });
+    if (msg.senderId !== session.userId) return NextResponse.json({ error: "Anda tidak bisa mengedit pesan orang lain" }, { status: 403 });
+    if (msg.isDeleted) return NextResponse.json({ error: "Pesan yang ditarik tidak bisa diedit" }, { status: 400 });
+
+    // Update pesan
+    const [updatedMessage] = await db.update(messages)
+      .set({ 
+        body: body.trim(),
+        isEdited: true
+      })
+      .where(eq(messages.id, messageId))
+      .returning();
+
+    // Notifikasi SSE
+    const otherParticipantRow = await db.query.conversationParticipants.findFirst({
+      where: and(
+        eq(conversationParticipants.conversationId, conversationId),
+        ne(conversationParticipants.userId, session.userId)
+      )
+    });
+
+    if (otherParticipantRow) {
+      await redis.publish(
+        `user:${otherParticipantRow.userId}:messages`, 
+        JSON.stringify({ type: 'message_edited', conversationId, messageId })
+      );
+    }
+
+    return NextResponse.json({ data: updatedMessage });
+  } catch (error) {
+    if (error instanceof ForbiddenError) {
+      return NextResponse.json({ error: error.message }, { status: 403 });
+    }
+    console.error("Edit message error:", error);
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+  }
+}
