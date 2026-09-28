@@ -6,6 +6,7 @@ import {
   uniqueIndex,
   index,
   boolean,
+  AnyPgColumn,
 } from "drizzle-orm/pg-core";
 
 // 1. Users Table
@@ -68,6 +69,11 @@ export const messages = pgTable(
       .references(() => users.id, { onDelete: "cascade" })
       .notNull(),
     body: text("body").notNull(),
+    attachmentUrl: text("attachment_url"),
+    attachmentType: text("attachment_type"),
+    replyToId: uuid("reply_to_id").references((): AnyPgColumn => messages.id),
+    isDeleted: boolean("is_deleted").default(false).notNull(),
+    isForwarded: boolean("is_forwarded").default(false).notNull(),
     isRead: boolean("is_read").default(false).notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },

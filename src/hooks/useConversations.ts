@@ -18,7 +18,6 @@ export function useConversations() {
       return data;
     },
     // Karena ini aplikasi chat, data percakapan perlu lumayan segar, namun
-    // staleTime default di providers.tsx (5 detik) sudah cukup oke.
-    refetchInterval: 3000, // Refresh otomatis tiap 3 detik (Realtime Polling)
+    // Realtime diselesaikan via SSE (EventSource) sehingga tidak perlu refetchInterval.
   });
 }

@@ -5,6 +5,12 @@ export interface Message {
   conversationId: string;
   senderId: string;
   body: string;
+  isRead: boolean;
+  isDeleted?: boolean;
+  isForwarded?: boolean;
+  replyToId?: string | null;
+  attachmentUrl?: string | null;
+  attachmentType?: string | null;
   createdAt: string;
 }
 
@@ -20,7 +26,6 @@ export function useMessages(conversationId: string | null) {
       return data;
     },
     enabled: !!conversationId,
-    refetchInterval: 3000, // Refresh pesan tiap 3 detik (Realtime Polling)
   });
 }
 
@@ -29,19 +34,24 @@ export function useSendMessage(conversationId: string | null) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (text: string) => {
+    mutationFn: async (payload: { text: string; replyToId?: string | null; attachmentUrl?: string | null; attachmentType?: string | null }) => {
       if (!conversationId) throw new Error("Percakapan belum dipilih");
       const res = await fetch(`/api/conversations/${conversationId}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ body: text }),
+        body: JSON.stringify({ 
+          body: payload.text,
+          replyToId: payload.replyToId,
+          attachmentUrl: payload.attachmentUrl,
+          attachmentType: payload.attachmentType
+        }),
       });
       if (!res.ok) throw new Error("Gagal mengirim pesan");
       const { data } = await res.json();
       return data;
     },
     // Saat fungsi mutate dipanggil, sebelum request selesai:
-    onMutate: async (newText) => {
+    onMutate: async (payload) => {
       if (!conversationId) return;
 
       // 1. Batalkan semua refetch yang sedang berjalan untuk list pesan ini
@@ -54,8 +64,12 @@ export function useSendMessage(conversationId: string | null) {
       const optimisticMessage: Message = {
         id: `optimistic-${Date.now()}`, 
         conversationId,
-        senderId: "optimistic-current-user", // Identifier khusus agar UI tau ini pesan kita
-        body: newText,
+        senderId: "optimistic-current-user",
+        body: payload.text,
+        isRead: false,
+        replyToId: payload.replyToId,
+        attachmentUrl: payload.attachmentUrl,
+        attachmentType: payload.attachmentType,
         createdAt: new Date().toISOString(),
       };
 
@@ -81,5 +95,27 @@ export function useSendMessage(conversationId: string | null) {
         queryClient.invalidateQueries({ queryKey: ["conversations"] });
       }
     },
+  });
+}
+
+// 3. Hook untuk Menarik Pesan
+export function useDeleteMessage(conversationId: string | null) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (messageId: string) => {
+      if (!conversationId) throw new Error("Percakapan belum dipilih");
+      const res = await fetch(`/api/conversations/${conversationId}/messages/${messageId}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Gagal menarik pesan");
+      return messageId;
+    },
+    onSuccess: () => {
+      if (conversationId) {
+        queryClient.invalidateQueries({ queryKey: ["messages", conversationId] });
+        queryClient.invalidateQueries({ queryKey: ["conversations"] });
+      }
+    }
   });
 }

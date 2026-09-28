@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
 import { db } from "@/db";
 import { conversations, conversationParticipants, users, messages } from "@/db/schema/index";
-import { and, desc, eq, ne, inArray } from "drizzle-orm";
+import { and, desc, eq, ne, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 
 export async function GET(req: NextRequest) {
